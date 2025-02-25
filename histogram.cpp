@@ -6,6 +6,7 @@
 #include <iostream>
 #include <istream>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
@@ -15,7 +16,7 @@
 #include <vector>
 
 void read_file(std::istream& in, std::vector<std::pair<double, int>>& data,
-               int who, int column) {
+               int who, int column, std::optional<double> minimum) {
   std::string scratch;
   double value;
   std::istringstream line;
@@ -34,13 +35,16 @@ void read_file(std::istream& in, std::vector<std::pair<double, int>>& data,
       throw std::runtime_error("Column " + std::to_string(column) +
                                " is not a number in: " + line.str());
     }
-    data.emplace_back(value, who);
+    if (!minimum || value >= *minimum) {
+      data.emplace_back(value, who);
+    }
   }
 }
 
 struct Args {
   bool help = false;
   int column = 1;  // one-based
+  std::optional<double> minimum;
   std::vector<std::string> input_files;
 };
 
@@ -61,6 +65,22 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
               << " option is not an integer: " << argv[i] << '\n';
         return 2;
       }
+    } else if (arg == "-m" || arg == "--min") {
+      if (++i == argc) {
+        error << arg << " option missing its argument.\n";
+        return 3;
+      }
+      std::istringstream in{argv[i]};
+      in >> result.minimum.emplace();
+      if (!in) {
+        error << "Argument to " << arg
+              << " option is not a real number: " << argv[i] << '\n';
+        return 4;
+      }
+    } else if (!arg.empty() && arg[0] == '-') {
+      error << "Argument " << arg << " looks like an unknown option.\n"
+        "If it's actually the name of a file, then prefix it with \"./\".\n";
+      return 5;
     } else {
       result.input_files.emplace_back(arg);
     }
@@ -70,13 +90,28 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
 }
 
 void usage(std::ostream& out, const char* argv0) {
-  out << "usage: " << argv0
-      << " [-h | --help] [(-c | --column) COLUMN] [INPUT_FILE ...]\n";
+  out << "usage: " << argv0 <<
+R"( [-h | --help] [(-c | --column) COLUMN] [(-m | --min) MIN] [INPUT_FILE ...]
+
+options:
+
+  -h --help
+    Print this message to standard output.
+
+  -c --column COLUMN
+    Read values from the one-based COLUMN of each input line.
+    COLUMN is 1 (the first column) by default.
+
+  -m --min MIN
+    Ignore input lines whose value is less than MIN.
+    By default, no input lines are ignored.
+)";
 }
 
 int main(int argc, char* argv[]) try {
   Args args;
   if (int rc = parse_args(args, argc, argv, std::cerr)) {
+    std::cerr << '\n';
     usage(std::cerr, argv[0]);
     return rc;
   }
@@ -93,7 +128,7 @@ int main(int argc, char* argv[]) try {
     std::ifstream in;
     in.exceptions(std::ios::badbit);
     in.open(args.input_files[who]);
-    read_file(in, data, who, args.column);
+    read_file(in, data, who, args.column, args.minimum);
     output_files.push_back(
         std::make_unique<std::ofstream>(args.input_files[who] + ".hist"));
     count_in_current_bin.push_back(0);
@@ -104,7 +139,7 @@ int main(int argc, char* argv[]) try {
     std::istream in{std::cin.rdbuf()};
     in.exceptions(std::ios::badbit);
     const int who = 0;
-    read_file(in, data, who, args.column);
+    read_file(in, data, who, args.column, args.minimum);
     output_files.push_back(std::make_unique<std::ostream>(std::cout.rdbuf()));
     count_in_current_bin.push_back(0);
   }
