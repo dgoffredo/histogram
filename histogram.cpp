@@ -78,8 +78,10 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
         return 4;
       }
     } else if (!arg.empty() && arg[0] == '-') {
-      error << "Argument " << arg << " looks like an unknown option.\n"
-        "If it's actually the name of a file, then prefix it with \"./\".\n";
+      error << "Argument " << arg
+            << " looks like an unknown option.\n"
+               "If it's actually the name of a file, then prefix it with "
+               "\"./\".\n";
       return 5;
     } else {
       result.input_files.emplace_back(arg);
@@ -91,7 +93,7 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
 
 void usage(std::ostream& out, const char* argv0) {
   out << "usage: " << argv0 <<
-R"( [-h | --help] [(-c | --column) COLUMN] [(-m | --min) MIN] [INPUT_FILE ...]
+      R"( [-h | --help] [(-c | --column) COLUMN] [(-m | --min) MIN] [INPUT_FILE ...]
 
 options:
 
