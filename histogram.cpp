@@ -16,7 +16,7 @@
 #include <vector>
 
 void read_file(std::istream& in, std::vector<std::pair<double, int>>& data,
-               int who, int column, std::optional<double> minimum) {
+               int who, int column, std::optional<double> minimum, std::optional<double> maximum) {
   std::string scratch;
   double value;
   std::istringstream line;
@@ -35,7 +35,7 @@ void read_file(std::istream& in, std::vector<std::pair<double, int>>& data,
       throw std::runtime_error("Column " + std::to_string(column) +
                                " is not a number in: " + line.str());
     }
-    if (!minimum || value >= *minimum) {
+    if ((!minimum || value >= *minimum) && (!maximum || value <= *maximum)) {
       data.emplace_back(value, who);
     }
   }
@@ -45,6 +45,7 @@ struct Args {
   bool help = false;
   int column = 1;  // one-based
   std::optional<double> minimum;
+  std::optional<double> maximum;
   std::vector<std::string> input_files;
 };
 
@@ -53,7 +54,7 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
     const std::string_view arg = argv[i];
     if (arg == "-h" || arg == "--help") {
       result.help = true;
-    } else if (arg == "-c" || arg == "--column") {
+    } else if (arg == "--column") {
       if (++i == argc) {
         error << arg << " option missing its integer argument.\n";
         return 1;
@@ -65,7 +66,7 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
               << " option is not an integer: " << argv[i] << '\n';
         return 2;
       }
-    } else if (arg == "-m" || arg == "--min") {
+    } else if (arg == "--min") {
       if (++i == argc) {
         error << arg << " option missing its argument.\n";
         return 3;
@@ -76,6 +77,18 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
         error << "Argument to " << arg
               << " option is not a real number: " << argv[i] << '\n';
         return 4;
+      }
+    } else if (arg == "--max") {
+      if (++i == argc) {
+        error << arg << " option missing its argument.\n";
+        return 6;
+      }
+      std::istringstream in{argv[i]};
+      in >> result.maximum.emplace();
+      if (!in) {
+        error << "Argument to " << arg
+              << " option is not a real number: " << argv[i] << '\n';
+        return 7;
       }
     } else if (!arg.empty() && arg[0] == '-') {
       error << "Argument " << arg << " looks like an unknown option.\n"
@@ -91,19 +104,23 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
 
 void usage(std::ostream& out, const char* argv0) {
   out << "usage: " << argv0 <<
-R"( [-h | --help] [(-c | --column) COLUMN] [(-m | --min) MIN] [INPUT_FILE ...]
+R"( [-h | --help] [--column COLUMN] [--min MIN] [--max MAX] [INPUT_FILE ...]
 
 options:
 
   -h --help
     Print this message to standard output.
 
-  -c --column COLUMN
+  --column COLUMN
     Read values from the one-based COLUMN of each input line.
     COLUMN is 1 (the first column) by default.
 
-  -m --min MIN
+  --min MIN
     Ignore input lines whose value is less than MIN.
+    By default, no input lines are ignored.
+
+  --max MAX
+    Ignore input lines whose value is greater than MAX.
     By default, no input lines are ignored.
 )";
 }
@@ -128,7 +145,7 @@ int main(int argc, char* argv[]) try {
     std::ifstream in;
     in.exceptions(std::ios::badbit);
     in.open(args.input_files[who]);
-    read_file(in, data, who, args.column, args.minimum);
+    read_file(in, data, who, args.column, args.minimum, args.maximum);
     output_files.push_back(
         std::make_unique<std::ofstream>(args.input_files[who] + ".hist"));
     count_in_current_bin.push_back(0);
@@ -139,7 +156,7 @@ int main(int argc, char* argv[]) try {
     std::istream in{std::cin.rdbuf()};
     in.exceptions(std::ios::badbit);
     const int who = 0;
-    read_file(in, data, who, args.column, args.minimum);
+    read_file(in, data, who, args.column, args.minimum, args.maximum);
     output_files.push_back(std::make_unique<std::ostream>(std::cout.rdbuf()));
     count_in_current_bin.push_back(0);
   }

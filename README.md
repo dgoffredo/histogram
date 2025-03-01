@@ -11,19 +11,23 @@ is individually histogrammed.
 
 ```console
 $ ./histogram --help
-usage: ./histogram [-h | --help] [(-c | --column) COLUMN] [(-m | --min) MIN] [INPUT_FILE ...]
+usage: ./histogram [-h | --help] [--column COLUMN] [--min MIN] [--max MAX] [INPUT_FILE ...]
 
 options:
 
   -h --help
     Print this message to standard output.
 
-  -c --column COLUMN
+  --column COLUMN
     Read values from the one-based COLUMN of each input line.
     COLUMN is 1 (the first column) by default.
 
-  -m --min MIN
+  --min MIN
     Ignore input lines whose value is less than MIN.
+    By default, no input lines are ignored.
+
+  --max MAX
+    Ignore input lines whose value is greater than MAX.
     By default, no input lines are ignored.
 ```
 
