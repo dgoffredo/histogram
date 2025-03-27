@@ -31,5 +31,10 @@ options:
     By default, no input lines are ignored.
 ```
 
+Here is an svgz image:
+
+![fingers crossed][2]
+
 [1]: https://en.wikipedia.org/wiki/Histogram#Freedman%E2%80%93Diaconis_rule
+[2]: bruh.svgz
 
