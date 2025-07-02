@@ -198,9 +198,11 @@ int main(int argc, char* argv[]) try {
     if (value >= bottom_of_next_bin) {
       // Output the current bin.
       for (std::size_t who = 0; who < output_files.size(); ++who) {
-        *output_files[who] << bottom_of_current_bin << ' '
-                           << count_in_current_bin[who] << '\n';
-        count_in_current_bin[who] = 0;
+        if (count_in_current_bin[who]) {
+          *output_files[who] << bottom_of_current_bin << ' '
+                             << count_in_current_bin[who] << '\n';
+          count_in_current_bin[who] = 0;
+        }
       }
       // On to the next.
       bottom_of_current_bin = bottom_of_next_bin;
@@ -212,8 +214,10 @@ int main(int argc, char* argv[]) try {
 
   // Output the final bin.
   for (std::size_t who = 0; who < output_files.size(); ++who) {
-    *output_files[who] << bottom_of_current_bin << ' '
-                       << count_in_current_bin[who] << '\n';
+    if (count_in_current_bin[who]) {
+      *output_files[who] << bottom_of_current_bin << ' '
+                         << count_in_current_bin[who] << '\n';
+    }
   }
 } catch (const std::exception& error) {
   std::cerr << error.what() << '\n';
