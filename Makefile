@@ -1,5 +1,5 @@
 histogram: histogram.cpp
-	$(CXX) -Wall -Wextra -pedantic -Werror -o $@ -O2 -DNDEBUG $^
+	$(CXX) -Wall -Wextra -pedantic -Werror --std=c++17 -o $@ -O2 -DNDEBUG $^
 
 .PHONY: format
 format:

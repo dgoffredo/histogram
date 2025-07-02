@@ -16,7 +16,8 @@
 #include <vector>
 
 void read_file(std::istream& in, std::vector<std::pair<double, int>>& data,
-               int who, int column, std::optional<double> minimum, std::optional<double> maximum) {
+               int who, int column, std::optional<double> minimum,
+               std::optional<double> maximum) {
   std::string scratch;
   double value;
   std::istringstream line;
@@ -26,6 +27,7 @@ void read_file(std::istream& in, std::vector<std::pair<double, int>>& data,
                     [](unsigned char ch) { return std::isspace(ch); })) {
       continue;
     }
+    line.clear();
     line.str(scratch);
     line.clear();
     for (int i = 1; i != column; ++i) {
@@ -45,6 +47,7 @@ void read_file(std::istream& in, std::vector<std::pair<double, int>>& data,
 struct Args {
   bool help = false;
   int column = 1;  // one-based
+  bool verbose = false;
   std::optional<double> minimum;
   std::optional<double> maximum;
   std::vector<std::string> input_files;
@@ -91,6 +94,8 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
               << " option is not a real number: " << argv[i] << '\n';
         return 7;
       }
+    } else if (arg == "--verbose") {
+      result.verbose = true;
     } else if (!arg.empty() && arg[0] == '-') {
       error << "Argument " << arg
             << " looks like an unknown option.\n"
@@ -125,6 +130,9 @@ options:
   --max MAX
     Ignore input lines whose value is greater than MAX.
     By default, no input lines are ignored.
+
+  --verbose
+    Print statistics to standard error.
 )";
 }
 
@@ -177,15 +185,25 @@ int main(int argc, char* argv[]) try {
   const double p75 = data[(75 * n) / 100].first;
   const double bin_width = 2 * (p75 - p25) / std::cbrt(n);
 
+  if (args.verbose) {
+    std::cerr << "n = " << n << "\np25 = " << p25 << "\np75 = " << p75
+              << "\nbin_width = " << bin_width
+              << "\nmin = " << data.front().first
+              << "\nmax = " << data.back().first << "\nnum_bins = "
+              << ((data.back().first - data.front().first) / bin_width) << '\n';
+  }
+
   double bottom_of_current_bin = data[0].first;
   double bottom_of_next_bin = bottom_of_current_bin + bin_width;
   for (const auto& [value, who] : data) {
     if (value >= bottom_of_next_bin) {
       // Output the current bin.
       for (std::size_t who = 0; who < output_files.size(); ++who) {
-        *output_files[who] << bottom_of_current_bin << ' '
-                           << count_in_current_bin[who] << '\n';
-        count_in_current_bin[who] = 0;
+        if (count_in_current_bin[who]) {
+          *output_files[who] << bottom_of_current_bin << ' '
+                             << count_in_current_bin[who] << '\n';
+          count_in_current_bin[who] = 0;
+        }
       }
       // On to the next.
       bottom_of_current_bin = bottom_of_next_bin;
@@ -197,8 +215,10 @@ int main(int argc, char* argv[]) try {
 
   // Output the final bin.
   for (std::size_t who = 0; who < output_files.size(); ++who) {
-    *output_files[who] << bottom_of_current_bin << ' '
-                       << count_in_current_bin[who] << '\n';
+    if (count_in_current_bin[who]) {
+      *output_files[who] << bottom_of_current_bin << ' '
+                         << count_in_current_bin[who] << '\n';
+    }
   }
 } catch (const std::exception& error) {
   std::cerr << error.what() << '\n';
