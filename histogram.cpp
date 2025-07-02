@@ -27,6 +27,7 @@ void read_file(std::istream& in, std::vector<std::pair<double, int>>& data,
       continue;
     }
     line.str(scratch);
+    line.clear();
     for (int i = 1; i != column; ++i) {
       line >> scratch;
     }
