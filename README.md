@@ -10,10 +10,13 @@ The bin width is calculated over the combined input data, and then each input
 is individually histogrammed.
 
 ```console
-$ ./histogram --help
-usage: ./histogram [-h | --help] [--column COLUMN] [--min MIN] [--max MAX] [INPUT_FILE ...]
+$ make
+[...]
 
-options:
+$ ./histogram --help
+usage: histogram [OPTIONS ...] [INPUT_FILE ...]
+
+OPTIONS:
 
   -h --help
     Print this message to standard output.
@@ -29,6 +32,13 @@ options:
   --max MAX
     Ignore input lines whose value is greater than MAX.
     By default, no input lines are ignored.
+
+  --extension EXTENSION
+    Append EXTENSION to output files created by this program.
+    EXTENSION is ".hist" by default.
+
+  --verbose
+    Print statistics to standard error.
 ```
 
 [1]: https://en.wikipedia.org/wiki/Histogram#Freedman%E2%80%93Diaconis_rule

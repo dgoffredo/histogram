@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cctype>
 #include <cmath>
+#include <execution>
 #include <fstream>
 #include <iostream>
 #include <istream>
@@ -48,6 +49,7 @@ struct Args {
   bool help = false;
   int column = 1;  // one-based
   bool verbose = false;
+  std::string extension = ".hist";
   std::optional<double> minimum;
   std::optional<double> maximum;
   std::vector<std::string> input_files;
@@ -96,6 +98,12 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
       }
     } else if (arg == "--verbose") {
       result.verbose = true;
+    } else if (arg == "--extension") {
+      if (++i == argc) {
+        error << arg << " option missing its argument.\n";
+        return 8;
+      }
+      result.extension = argv[i];
     } else if (!arg.empty() && arg[0] == '-') {
       error << "Argument " << arg
             << " looks like an unknown option.\n"
@@ -112,9 +120,9 @@ int parse_args(Args& result, int argc, char* argv[], std::ostream& error) {
 
 void usage(std::ostream& out, const char* argv0) {
   out << "usage: " << argv0 <<
-      R"( [-h | --help] [--column COLUMN] [--min MIN] [--max MAX] [INPUT_FILE ...]
+      R"( [OPTIONS ...] [INPUT_FILE ...]
 
-options:
+OPTIONS:
 
   -h --help
     Print this message to standard output.
@@ -130,6 +138,10 @@ options:
   --max MAX
     Ignore input lines whose value is greater than MAX.
     By default, no input lines are ignored.
+
+  --extension EXTENSION
+    Append EXTENSION to output files created by this program.
+    EXTENSION is ".hist" by default.
 
   --verbose
     Print statistics to standard error.
@@ -158,7 +170,7 @@ int main(int argc, char* argv[]) try {
     in.open(args.input_files[who]);
     read_file(in, data, who, args.column, args.minimum, args.maximum);
     output_files.push_back(
-        std::make_unique<std::ofstream>(args.input_files[who] + ".hist"));
+        std::make_unique<std::ofstream>(args.input_files[who] + args.extension));
     count_in_current_bin.push_back(0);
   }
 
@@ -175,7 +187,7 @@ int main(int argc, char* argv[]) try {
   const auto by_first = [](const auto& left, const auto& right) {
     return left.first < right.first;
   };
-  std::sort(data.begin(), data.end(), by_first);
+  std::sort(std::execution::par_unseq, data.begin(), data.end(), by_first);
 
   assert(!output_files.empty());
   assert(output_files.size() == count_in_current_bin.size());
